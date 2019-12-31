@@ -1,7 +1,6 @@
 #!/bin/bash
 # Version 0.1 - Nevarsin (Stefano Chittaro)
 # Simple script to automatically enable a ProtonVPN tunnel and subsequently set it as your LAN default outgoing network interface
-# WARNING: a full flush of the iptables FORWARD chain is executed. Modify the script if you need to preserve pre-existing rules in the FORWARD chain
 
 # ------------- Configuration ---------------------
 
@@ -30,7 +29,8 @@ then
       protonvpn c --cc $VPN_COUNTRY
       echo "... done"
       echo "Cleaning previous forward and NAT rules..."
-      iptables --flush FORWARD
+      iptables -D FORWARD -i $WAN_INT -o $LAN_INT -m state --state RELATED,ESTABLISHED -j ACCEPT
+      iptables -D FORWARD -i $LAN_INT -o $WAN_INT -j ACCEPT
       iptables -t nat --flush POSTROUTING
       echo "Setting Outgoing NAT to tun0..."
       iptables -A FORWARD -i tun0 -o $LAN_INT -m state --state RELATED,ESTABLISHED -j ACCEPT
@@ -43,7 +43,8 @@ then
       echo "Disconnecting VPN..."
       protonvpn d
       echo "... done"
-      iptables --flush FORWARD
+      iptables -D FORWARD -i tun0 -o $LAN_INT -m state --state RELATED,ESTABLISHED -j ACCEPT
+      iptables -D FORWARD -i $LAN_INT -o tun0 -j ACCEPT
       iptables -t nat --flush POSTROUTING
       echo "Setting Outgoing NAT back to $WAN_INT..."
       iptables -A FORWARD -i $WAN_INT -o $LAN_INT -m state --state RELATED,ESTABLISHED -j ACCEPT
